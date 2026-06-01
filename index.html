@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#141010" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Scratch Surprise" />
+    <title>Scratch Surprise</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --text: #fff7f1;
+        --muted: rgba(255, 247, 241, 0.74);
+        --line: rgba(255, 255, 255, 0.11);
+        --spicy: #ff6d4d;
+        --spicy-deep: #b7232f;
+        --sweet: #ffb56b;
+        --sweet-deep: #d8731f;
+        --safe: #35c26b;
+        --careful: #f39c38;
+        --danger: #ff5a68;
+        --shadow: 0 22px 50px rgba(0, 0, 0, 0.45);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        font-family: "Trebuchet MS", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(255, 109, 77, 0.22), transparent 32%),
+          radial-gradient(circle at top right, rgba(255, 181, 107, 0.18), transparent 28%),
+          linear-gradient(180deg, #110909 0%, #090606 100%);
+        overflow-x: hidden;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.025) 25%, transparent 25%) -24px 0 / 48px 48px,
+          linear-gradient(225deg, rgba(255, 255, 255, 0.02) 25%, transparent 25%) -24px 0 / 48px 48px;
+        opacity: 0.35;
+        pointer-events: none;
+      }
+      .app-shell {
+        width: min(100%, 680px);
+        margin: 0 auto;
+        min-height: 100vh;
+        padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+      }
+      .hero, .game-panel {
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(30, 20, 20, 0.86), rgba(12, 8, 8, 0.82));
+        backdrop-filter: blur(18px);
+        box-shadow: var(--shadow);
+        border-radius: 30px;
+      }
+      .hero { padding: 22px 18px 20px; }
+      .hero h1, .panel-title, .result-card h3 { margin: 0; letter-spacing: -0.03em; }
+      .eyebrow, .panel-kicker {
+        margin: 0 0 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.74rem;
+        color: rgba(255, 255, 255, 0.58);
+      }
+      .hero h1 { font-size: clamp(2.2rem, 7vw, 4rem); line-height: 0.95; max-width: 12ch; }
+      .intro { margin: 16px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.55; max-width: 36ch; }
+      .mode-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+      .mode-button, .primary-button, .text-button {
+        appearance: none;
+        border: 0;
+        font: inherit;
+        cursor: pointer;
+        transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, opacity 180ms ease;
+      }
+      .mode-button {
+        padding: 18px 12px;
+        border-radius: 22px;
+        color: white;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-size: 1rem;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+      .mode-button--spicy { background: linear-gradient(135deg, var(--spicy), var(--spicy-deep)); }
+      .mode-button--sweet { background: linear-gradient(135deg, var(--sweet), var(--sweet-deep)); color: #271100; }
+      .mode-button:active, .primary-button:active, .text-button:active { transform: translateY(1px) scale(0.985); }
+      .game-panel { margin-top: 16px; padding: 18px; }
+      .is-hidden { display: none; }
+      .panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .panel-title { font-size: 1.6rem; line-height: 1.05; }
+      .text-button {
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-size: 0.92rem;
+      }
+      .scratch-shell {
+        position: relative;
+        min-height: 500px;
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 30%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.16));
+      }
+      .result-card {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-rows: 1.15fr auto;
+        opacity: 0.35;
+        filter: blur(6px) saturate(0.8);
+        transition: opacity 250ms ease, filter 250ms ease, transform 250ms ease;
+      }
+      .result-card.is-revealed { opacity: 1; filter: none; }
+      .result-card__media { min-height: 280px; }
+      .result-card__media img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+      .result-card__body { padding: 18px; background: linear-gradient(180deg, rgba(12, 8, 8, 0.82), rgba(17, 12, 12, 0.96)); }
+      .result-card__meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+      .position-number {
+        font-size: 0.84rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.68);
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+      .badge::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: currentColor;
+        box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 18%, transparent);
+      }
+      .badge--sweet { background: rgba(76, 194, 255, 0.16); color: #8cd9ff; }
+      .badge--spicy { background: rgba(255, 122, 89, 0.18); color: #ffb08f; }
+      .result-card h3 { font-size: clamp(1.8rem, 5.8vw, 2.5rem); line-height: 1; margin-bottom: 10px; }
+      .result-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 1rem; }
+      #scratchCanvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        transition: opacity 200ms ease, transform 200ms ease;
+      }
+      #scratchCanvas.is-clear {
+        opacity: 0;
+        transform: scale(1.02);
+        pointer-events: none;
+      }
+      .actions { display: flex; gap: 12px; margin-top: 14px; }
+      .primary-button {
+        flex: 1;
+        padding: 16px 18px;
+        border-radius: 20px;
+        color: #1f100f;
+        font-size: 1rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ffe0a8 0%, #ffb56b 45%, #ff7c64 100%);
+        box-shadow: 0 14px 26px rgba(255, 128, 92, 0.24);
+      }
+      @media (min-width: 680px) {
+        .app-shell { padding-top: 28px; padding-bottom: 28px; }
+        .hero { padding: 28px; }
+        .game-panel { padding: 22px; }
+        .scratch-shell { min-height: 540px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero" aria-labelledby="title">
+        <div class="hero__copy">
+          <p class="eyebrow">Tap, scratch, reveal</p>
+          <h1 id="title">Choose a mood and uncover a surprise.</h1>
+          <p class="intro">Pick <strong>SPICY</strong> or <strong>SWEET</strong>, then scratch away the silver mask to reveal a random sex position.</p>
+        </div>
+        <div class="mode-picker" id="modePicker">
+          <button class="mode-button mode-button--spicy" data-mode="spicy" type="button">SPICY</button>
+          <button class="mode-button mode-button--sweet" data-mode="sweet" type="button">SWEET</button>
+        </div>
+      </section>
+
+      <section class="game-panel is-hidden" id="gamePanel" aria-live="polite">
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker" id="modeLabel">Mode</p>
+            <h2 class="panel-title" id="panelTitle">Scratch to reveal your sex position</h2>
+          </div>
+          <button class="text-button" id="changeMoodButton" type="button">Change mood</button>
+        </div>
+
+        <div class="scratch-shell" id="scratchShell">
+          <article class="result-card" id="resultCard" aria-label="Sex position reveal">
+            <div class="result-card__media">
+              <img id="positionImage" alt="" />
+            </div>
+            <div class="result-card__body">
+              <div class="result-card__meta">
+                <span class="position-number" id="positionNumber">Your sex position</span>
+                <span class="badge" id="safetyBadge">Safe</span>
+              </div>
+              <h3 id="positionName">Your sex position is...</h3>
+            </div>
+          </article>
+          <canvas id="scratchCanvas" aria-label="Scratch card overlay"></canvas>
+        </div>
+
+        <div class="actions">
+          <button class="primary-button" id="scratchAgainButton" type="button">Scratch Again</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./catalog.js"></script>
+    <script>
+      const IMAGE_FILES = Array.isArray(window.LOCAL_IMAGE_FILES) ? window.LOCAL_IMAGE_FILES : [];
+      const dom = {
+        modePicker: document.getElementById("modePicker"),
+        gamePanel: document.getElementById("gamePanel"),
+        modeLabel: document.getElementById("modeLabel"),
+        panelTitle: document.getElementById("panelTitle"),
+        scratchCanvas: document.getElementById("scratchCanvas"),
+        resultCard: document.getElementById("resultCard"),
+        positionImage: document.getElementById("positionImage"),
+        positionNumber: document.getElementById("positionNumber"),
+        positionName: document.getElementById("positionName"),
+        safetyBadge: document.getElementById("safetyBadge"),
+        scratchAgainButton: document.getElementById("scratchAgainButton"),
+        changeMoodButton: document.getElementById("changeMoodButton")
+      };
+
+      const state = {
+        isScratching: false,
+        revealed: false,
+        lastPoint: null,
+        analysisTick: 0,
+        overlayReady: false,
+        currentEntry: null
+      };
+
+      const ctx = dom.scratchCanvas.getContext("2d", { willReadFrequently: true });
+      const probeCanvas = document.createElement("canvas");
+      probeCanvas.width = 48;
+      probeCanvas.height = 64;
+      const probeCtx = probeCanvas.getContext("2d", { willReadFrequently: true });
+
+      function hashString(text) {
+        let hash = 0;
+        for (let i = 0; i < text.length; i += 1) {
+          hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+        }
+        return hash;
+      }
+
+      function titleFromFilename(filename) {
+        const stem = filename
+          .replace(/^imgi_/, "")
+          .replace(/\.(png|jpg|jpeg|webp)$/i, "")
+          .replace(/-\d+x\d+$/i, "");
+        const tokens = stem.split("_").filter(Boolean);
+        const alphaIndex = tokens.findIndex((token) => /[a-z]/i.test(token));
+        if (alphaIndex >= 0) {
+          const parts = tokens.slice(alphaIndex).filter((token) => !/^\d+$/.test(token));
+          const raw = parts.join(" ").replace(/\s+/g, " ").trim();
+          return raw
+            ? raw.replace(/\b\w/g, (match) => match.toUpperCase())
+            : `Position ${tokens[0] || "Random"}`;
+        }
+        return `Position ${tokens[0] || "Random"}`;
+      }
+
+      function moodFromFilename(filename) {
+        return hashString(filename) % 2 === 0 ? "Sweet" : "Spicy";
+      }
+
+      const CATALOG = IMAGE_FILES.map((file, index) => ({
+        id: index + 1,
+        file,
+        title: titleFromFilename(file),
+        mood: moodFromFilename(file)
+      }));
+
+      function badgeClass(mood) {
+        return mood === "Sweet" ? "badge badge--sweet" : "badge badge--spicy";
+      }
+
+      function randomEntry() {
+        const pool = CATALOG.length > 0 ? CATALOG : [{ id: 0, file: "", title: "No images found", mood: "Sweet" }];
+        const available = pool.filter((entry) => entry.file !== state.currentEntry?.file);
+        const source = available.length > 0 ? available : pool;
+        return source[Math.floor(Math.random() * source.length)];
+      }
+
+      function fitCanvas() {
+        const rect = dom.scratchCanvas.getBoundingClientRect();
+        const dpr = Math.max(window.devicePixelRatio || 1, 1);
+        dom.scratchCanvas.width = Math.max(1, Math.round(rect.width * dpr));
+        dom.scratchCanvas.height = Math.max(1, Math.round(rect.height * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawOverlay();
+      }
+
+      function drawOverlay() {
+        if (!dom.scratchCanvas.width || !dom.scratchCanvas.height) return;
+        const width = dom.scratchCanvas.getBoundingClientRect().width;
+        const height = dom.scratchCanvas.getBoundingClientRect().height;
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, "#d8d8d8");
+        gradient.addColorStop(0.55, "#9f9f9f");
+        gradient.addColorStop(1, "#c5c5c5");
+        ctx.globalCompositeOperation = "source-over";
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        for (let i = 0; i < 14; i += 1) ctx.fillRect(0, (i / 14) * height, width, 1);
+        ctx.fillStyle = "rgba(20,20,20,0.28)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = "700 18px Trebuchet MS, Segoe UI, sans-serif";
+        ctx.fillText("SCRATCH HERE", width / 2, height / 2 - 12);
+        ctx.font = "500 13px Trebuchet MS, Segoe UI, sans-serif";
+        ctx.fillText("Drag your finger across the card", width / 2, height / 2 + 14);
+        state.overlayReady = true;
+      }
+
+      function clearScratchPoint(x, y) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.beginPath();
+        ctx.arc(x, y, 34, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function clearScratchStroke(from, to) {
+        if (!from) {
+          clearScratchPoint(to.x, to.y);
+          return;
+        }
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const distance = Math.hypot(dx, dy);
+        const steps = Math.max(1, Math.ceil(distance / 10));
+        for (let i = 1; i <= steps; i += 1) {
+          const t = i / steps;
+          clearScratchPoint(from.x + dx * t, from.y + dy * t);
+        }
+      }
+
+      function getPoint(event) {
+        const rect = dom.scratchCanvas.getBoundingClientRect();
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      }
+
+      function renderPosition(entry) {
+        state.currentEntry = entry;
+        state.lastPoint = null;
+        dom.modeLabel.textContent = `${entry.mood} mode`;
+        dom.panelTitle.textContent = "Scratch to reveal your random position";
+        dom.positionNumber.textContent = `${entry.mood} position #${entry.id}`;
+        dom.positionName.textContent = entry.title;
+        dom.safetyBadge.textContent = entry.mood;
+        dom.safetyBadge.className = badgeClass(entry.mood);
+        dom.positionImage.src = `./assets/${encodeURIComponent(entry.file)}`;
+        dom.positionImage.alt = entry.title;
+        dom.positionImage.onerror = () => {
+          dom.positionImage.onerror = null;
+          if (IMAGE_FILES.length > 0) {
+            dom.positionImage.src = `./assets/${encodeURIComponent(IMAGE_FILES[0])}`;
+          }
+        };
+        dom.resultCard.classList.remove("is-revealed");
+        dom.scratchCanvas.classList.remove("is-clear");
+        fitCanvas();
+      }
+
+      function showGame() {
+        dom.modePicker.classList.add("is-hidden");
+        dom.gamePanel.classList.remove("is-hidden");
+      }
+
+      function startRound() {
+        state.isScratching = false;
+        state.revealed = false;
+        if (state.analysisTick) {
+          window.clearTimeout(state.analysisTick);
+          state.analysisTick = 0;
+        }
+        showGame();
+        renderPosition(randomEntry());
+      }
+
+      function revealPosition() {
+        if (state.revealed) return;
+        state.revealed = true;
+        dom.resultCard.classList.add("is-revealed");
+        dom.scratchCanvas.classList.add("is-clear");
+        dom.panelTitle.textContent = "Revealed";
+      }
+
+      function sampleScratchProgress() {
+        if (!state.overlayReady || state.revealed) return;
+        const width = probeCanvas.width;
+        const height = probeCanvas.height;
+        probeCtx.clearRect(0, 0, width, height);
+        probeCtx.drawImage(dom.scratchCanvas, 0, 0, width, height);
+        const pixels = probeCtx.getImageData(0, 0, width, height).data;
+        let transparent = 0;
+        for (let i = 3; i < pixels.length; i += 4) {
+          if (pixels[i] < 20) transparent += 1;
+        }
+        if (transparent / (width * height) >= 0.32) revealPosition();
+      }
+
+      function scheduleAnalysis() {
+        if (state.analysisTick) return;
+        state.analysisTick = window.setTimeout(() => {
+          state.analysisTick = 0;
+          sampleScratchProgress();
+        }, 40);
+      }
+
+      dom.scratchCanvas.addEventListener("pointerdown", (event) => {
+        if (state.revealed) return;
+        state.isScratching = true;
+        dom.scratchCanvas.setPointerCapture(event.pointerId);
+        const point = getPoint(event);
+        clearScratchStroke(null, point);
+        state.lastPoint = point;
+        scheduleAnalysis();
+      });
+
+      dom.scratchCanvas.addEventListener("pointermove", (event) => {
+        if (!state.isScratching || state.revealed) return;
+        const point = getPoint(event);
+        clearScratchStroke(state.lastPoint, point);
+        state.lastPoint = point;
+        scheduleAnalysis();
+      });
+
+      ["pointerup", "pointercancel", "pointerleave"].forEach((type) => {
+        dom.scratchCanvas.addEventListener(type, () => {
+          state.isScratching = false;
+          state.lastPoint = null;
+          scheduleAnalysis();
+        });
+      });
+
+      dom.scratchAgainButton.addEventListener("click", startRound);
+      dom.changeMoodButton.addEventListener("click", () => {
+        if (state.analysisTick) {
+          window.clearTimeout(state.analysisTick);
+          state.analysisTick = 0;
+        }
+        state.isScratching = false;
+        state.lastPoint = null;
+        state.revealed = false;
+        dom.gamePanel.classList.add("is-hidden");
+        dom.modePicker.classList.remove("is-hidden");
+      });
+
+      dom.modePicker.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-mode]");
+        if (!button) return;
+        startRound();
+      });
+
+      window.addEventListener("resize", () => {
+        if (!dom.gamePanel.classList.contains("is-hidden")) fitCanvas();
+      });
+
+      window.addEventListener("orientationchange", () => {
+        if (!dom.gamePanel.classList.contains("is-hidden")) {
+          window.setTimeout(fitCanvas, 150);
+        }
+      });
+
+      window.addEventListener("load", drawOverlay);
+    </script>
+  </body>
+</html>
